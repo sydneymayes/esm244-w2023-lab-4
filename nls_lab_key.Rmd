@@ -12,6 +12,7 @@ library(tidyverse)
 library(Metrics)
 library(cowplot)
 library(here)
+library(kableExtra)
 
 
 ```
@@ -29,7 +30,7 @@ All data comes from the [RAM Legacy Database](https://www.re3data.org/repository
 Load in the data.
 
 ```{r}
-load(here("labs","data","fish_data.Rdata"))
+load(here("data","fish_data.Rdata"))
 ```
 
 
@@ -129,6 +130,30 @@ ggplot(data=one_stock_predict)+
 ```
 
 
+These fishery models are easily fit by nls, but sometimes we need to add more controls. I want to emphasize, this is unnecessary for these data and models. I'm only including it to show how you would do it and what happens.
+
+```{r}
+# default settings nls.control(maxiter = 50, tol = 1e-05, minFactor = 1/1024,
+            #printEval = FALSE, warnOnly = FALSE)
+
+control_nls=nls(surplus~fox(m,carry,TBbest),
+                  data=one_stock,
+                  start=list(m=guess_vec[1],carry=guess_vec[2]),
+                  control = nls.control(tol = 2.1e-9,minFactor=1e-10,warnOnly = TRUE))
+
+broom::tidy(control_nls) %>% 
+  kable(caption = "Control NLS") %>% 
+  kable_classic()
+
+broom::tidy(one_stock_nls) %>% 
+  kable(caption = "Original NLS") %>% 
+  kable_classic()
+
+```
+
+Huzzah! We improved our carrying capacity coefficient by .01! But was it really worth it? Not really. In more complex models you may need to increase the max iterations to make sure the algorithm has time to converge. That will increase the time it takes to run however, so find a balance between accuracy and time. If you do need to be even more accurate you can up the tolerance, but remember the default is already saying we need to see a change of only 0.0001% difference. That's very precise. 
+
+
 Great our model works on a single model! Now we need to find a way to replicate the analysis. Ideally without using for loops as those can be a pain to account for. 
 
 ## Using purrr to run many nls models
@@ -185,6 +210,7 @@ which(r_mse$RMSE-fox_all$RMSE<0)
 
 fox_all$stockid[39]
 ```
+
 In the paper, about 12% of the stocks were more explained by random shocks and 16% more so by abundance models. The rest were led by regime shifts that we did not model. Our results only found one stock out of 44 was better explained by random growth. Either our choice of nls models is far better than their mle method (not likely), or the subset I chose lends itself more to abundance models (this is really what happened). I did not want to overwhelm the analysis with over 200 stocks. Cod species in their paper typically were best explained by abundance models. Since our dataset focuses on cod, it's unsurprising that the Fox model best predicts cod surplus.
 
 ## Graph the top 5 best fit models
