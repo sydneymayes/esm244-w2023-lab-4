@@ -5,7 +5,7 @@ date: "2023-02-02"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, echo = TRUE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 
 library(tidyverse)
@@ -119,4 +119,36 @@ fox_all <- surplus %>%
 
 ```
 
+## Graphs the top 5 best fit model
+```{r}
+plots <- fox_all %>% 
+  arrange(rmse) %>% 
+  head(5) %>% 
+  mutate(graph=map2(data, predictions,
+                    ~ggplot() +
+                      geom_point(data = .x, 
+                                 aes(x = .x$year, y=.x$surplus, color = 'Actual'))+
+                      geom_point(aes(x=.x$year, y=.y,color='Predicted'))+
+                      theme_minimal()+
+                      xlab('')+
+                      ylab('Surplus')+
+                      scale_color_manual(name='Legend', breaks = 
+c('Actual', 'Predicted'), values = c('Actual'='black', 'Predicted'='red'))))
+
+#
+plot_list = plots$graph
+cowplot::plot_grid(plotlist = plot_list, labels = c(plots$stockid, ""), hjust = -0.5, vjust=1)
+```
+```{r}
+legend <- get_legend(plots$graph[[1]])
+
+for(i in 1:length(plots$graph)){
+  plots$graph[[i]]<- plots$graph[[i]]+theme(legend.position = "none")
+}
+
+plot_legend <- plots$graph
+plot_legend[[6]] <- legend
+
+cowplot::plot_grid(plotlist = plot_legend, labels = c(plots$stockid, ""), hjust=-0.5, vjust=1)
+```
 
